@@ -82,11 +82,11 @@
     </style>
 </head>
 
-<body class="bg-neutral-bg font-sans text-neutral-text h-screen" x-data="{ mobileMenuOpen: false }">
+<body class="bg-neutral-bg font-sans text-neutral-text h-screen" x-data="flashcardTrainer()">
 
     <div class="container mx-auto p-4 h-full">
 
-        <div x-data="flashcardTrainer()" class="flex flex-col md:flex-row md:gap-8 w-full h-full">
+        <div class="flex flex-col md:flex-row md:gap-8 w-full h-full">
 
             <aside class="fixed top-0 left-0 h-full w-64 bg-neutral-surface/95 backdrop-blur-sm z-20 transform transition-transform duration-300 ease-in-out md:relative md:w-1/3 md:bg-transparent md:transform-none md:backdrop-filter-none" :class="{'translate-x-0': cardListVisible, '-translate-x-full': !cardListVisible}">
                 <div class="p-4 h-full flex flex-col relative">
@@ -151,9 +151,6 @@
             <main class="w-full md:w-2/3 flex-shrink-0 flex flex-col p-2">
                 <div class="flex-shrink-0">
                     <div class="flex items-center justify-center mb-4">
-                        <button @click="cardListVisible = !cardListVisible" class="md:hidden p-2 rounded-md hover:bg-neutral-surface mr-4">
-                            <span class="material-symbols-outlined">menu</span>
-                        </button>
                         <h1 class="font-bold text-3xl md:text-4xl text-neutral-primary text-center">
                             Discere</h1>
                     </div>
@@ -190,14 +187,14 @@
 
                         <div class="relative w-full h-full card" :class="{ 'is-flipped': flipped }">
                             <div @click="flipped = !flipped"
-                                class="absolute w-full h-full card-face bg-neutral-surface border border-neutral-border rounded-lg flex items-center justify-center cursor-pointer shadow-primary p-4">
+                                class="absolute w-full h-full card-face bg-neutral-surface border border-neutral-border rounded-lg flex items-center justify-center cursor-pointer shadow-primary p-4 overflow-hidden">
                                 <p class="text-3xl md:text-4xl font-bold text-neutral-text text-center"
-                                    x-text="currentCard.front"></p>
+                                    x-text="currentCard.front" x-ref="cardFrontText"></p>
                             </div>
                             <div @click="flipped = !flipped"
-                                class="absolute w-full h-full card-face card-back bg-neutral-border/20 border border-neutral-border rounded-lg flex flex-col items-center justify-center cursor-pointer shadow-primary p-4">
+                                class="absolute w-full h-full card-face card-back bg-neutral-border/20 border border-neutral-border rounded-lg flex flex-col items-center justify-center cursor-pointer shadow-primary p-4 overflow-hidden">
                                 <p class="text-3xl md:text-4xl font-bold text-neutral-primary text-center"
-                                    x-text="currentCard.back"></p>
+                                    x-text="currentCard.back" x-ref="cardBackText"></p>
                             </div>
                         </div>
                     </div>
@@ -288,9 +285,15 @@
                         <button type="button" @click="closeProfileModal()" class="px-4 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary">Schließen</button>
                     </div>
                 </div>
+    
             </div>
-
         </div>
+    
+        <!-- FAB for mobile menu -->
+        <button @click="cardListVisible = !cardListVisible"
+                class="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 flex items-center justify-center rounded-full bg-neutral-primary text-neutral-bg shadow-lg hover:shadow-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-neutral-bg focus:ring-neutral-primary transition-all hover:scale-110">
+            <span class="material-symbols-outlined">menu</span>
+        </button>
     </div>
  
     <script>
@@ -334,6 +337,10 @@
                     this.loadData();
                     this.loadProfile(this.activeProfileId);
                     this.initCanvas();
+
+                    this.$watch('currentCard', () => this.adjustFontSize());
+                    this.$watch('flipped', () => this.adjustFontSize());
+                    window.addEventListener('resize', () => this.adjustFontSize());
                 },
 
                 loadData() {
@@ -397,8 +404,6 @@
                 },
 
                 saveData() {
-                    // Make sure the current state of allCards is in cardData before saving
-                    this.cardData[this.activeProfileId] = this.allCards;
                     const dataToSave = {
                         profiles: this.profiles,
                         activeProfileId: this.activeProfileId,
@@ -525,9 +530,14 @@
                             const importedCards = JSON.parse(content);
                             if (Array.isArray(importedCards) && (importedCards.length === 0 || (importedCards[0].front && importedCards[0].back))) {
                                 const newCards = importedCards.map(c => ({...c, id: Date.now() + Math.random()}));
-                                this.allCards.push(...newCards);
+                                const currentCards = this.cardData[this.activeProfileId] || [];
+                                const updatedCards = [...currentCards, ...newCards];
+
+                                this.cardData[this.activeProfileId] = updatedCards;
+                                this.allCards = updatedCards;
+                                
                                 this.saveData();
-                                this.loadProfile(this.activeProfileId);
+                                this.loadProfile(this.activeProfileId); // Reload view after import
                                 alert(`${importedCards.length} Karten erfolgreich in das Profil '${this.profiles.find(p => p.id == this.activeProfileId).name}' importiert!`);
                             } else {
                                 alert('Ungültiges Dateiformat.');
@@ -543,17 +553,24 @@
  
                 swapSides() {
                     if (!confirm('Möchten Sie die Vorder- und Rückseiten aller Karten in diesem Profil tauschen?')) return;
-                    this.allCards = this.allCards.map(card => ({ ...card, front: card.back, back: card.front }));
+                    
+                    const swappedCards = this.cardData[this.activeProfileId].map(card => ({ ...card, front: card.back, back: card.front }));
+                    this.cardData[this.activeProfileId] = swappedCards;
+                    this.allCards = swappedCards;
+
                     this.saveData();
-                    this.loadProfile(this.activeProfileId);
+                    this.loadProfile(this.activeProfileId); // Reset the training view
                     alert('Die Seiten aller Karten wurden getauscht.');
                 },
  
                 deleteCard(cardToDelete) {
                     if (confirm(`Möchten Sie die Karte "${cardToDelete.front}" wirklich löschen?`)) {
-                        this.allCards = this.allCards.filter(card => card.id !== cardToDelete.id);
+                        const updatedCards = this.cardData[this.activeProfileId].filter(card => card.id !== cardToDelete.id);
+                        this.cardData[this.activeProfileId] = updatedCards;
+                        this.allCards = updatedCards;
+
                         this.saveData();
-                        this.loadProfile(this.activeProfileId);
+                        this.loadProfile(this.activeProfileId); // Reset the training view
                         alert('Karte gelöscht.');
                     }
                 },
@@ -575,29 +592,57 @@
                         alert('Vorder- und Rückseite dürfen nicht leer sein.');
                         return;
                     }
- 
+                    
+                    let updatedCards;
+                    const currentCards = this.cardData[this.activeProfileId] || [];
+
                     if (this.editingCard) {
-                        const index = this.allCards.findIndex(c => c.id === this.editingCard.id);
-                        if (index !== -1) this.allCards[index] = { ...this.newCard };
+                        const id = this.editingCard.id;
+                        updatedCards = currentCards.map(c => (c.id === id ? { ...this.newCard, id } : c));
                     } else {
-                        const exists = this.allCards.some(c => c.front.toLowerCase() === this.newCard.front.toLowerCase());
+                        const exists = currentCards.some(c => c.front.toLowerCase() === this.newCard.front.toLowerCase());
                         if (exists && !confirm('Eine Karte mit dieser Vorderseite existiert bereits. Trotzdem hinzufügen?')) {
                             return;
                         }
-                        this.allCards.push({ ...this.newCard, id: Date.now() });
+                        updatedCards = [...currentCards, { ...this.newCard, id: Date.now() }];
                     }
- 
+
+                    this.cardData[this.activeProfileId] = updatedCards;
+                    this.allCards = updatedCards;
+                    
                     this.saveData();
-                    this.loadProfile(this.activeProfileId);
+                    this.loadProfile(this.activeProfileId); // Reload view to ensure consistency
                     this.closeModal();
                     alert(this.editingCard ? 'Karte aktualisiert!' : 'Karte hinzugefügt!');
+                },
+
+                adjustFontSize() {
+                    this.$nextTick(() => {
+                        const elements = [this.$refs.cardFrontText, this.$refs.cardBackText];
+                        elements.forEach(el => {
+                            if (!el) return;
+                            
+                            // Reset font size to the base size from the CSS class to recalculate
+                            el.style.fontSize = '';
+                            
+                            // Use requestAnimationFrame to ensure the browser has rendered the element
+                            requestAnimationFrame(() => {
+                                let currentSize = parseFloat(window.getComputedStyle(el).fontSize);
+                                // Check for overflow and reduce font size until it fits
+                                while ((el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) && currentSize > 14) {
+                                    currentSize -= 1;
+                                    el.style.fontSize = currentSize + 'px';
+                                }
+                            });
+                        });
+                    });
                 },
 
                 // --- Profile Management Methods ---
                 switchProfile(id) {
                     this.activeProfileId = id;
-                    this.saveData();
                     this.loadProfile(id);
+                    this.saveData();
                 },
 
                 closeProfileModal() {
