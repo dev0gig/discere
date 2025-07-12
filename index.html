@@ -429,7 +429,7 @@
                             const importedCards = JSON.parse(content);
                             if (Array.isArray(importedCards) && (importedCards.length === 0 || (importedCards[0].front && importedCards[0].back))) {
                                 const newCards = importedCards.map(c => ({...c, id: Date.now() + Math.random()}));
-                                this.allCards = [...this.allCards, ...newCards];
+                                this.allCards = newCards;
                                 this.saveCards();
                                 this.loadCards();
                                 alert(`${importedCards.length} Karten erfolgreich importiert!`);
