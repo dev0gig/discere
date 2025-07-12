@@ -97,6 +97,20 @@
                         </button>
                     </div>
 
+                    <div class="mb-4">
+                        <label for="profile-select" class="block text-sm font-medium text-neutral-dim mb-1">Profil</label>
+                        <div class="flex gap-2">
+                            <select id="profile-select" x-model="activeProfileId" @change="switchProfile($event.target.value)" class="flex-1 bg-neutral-surface border border-neutral-border rounded-md px-3 py-2 text-neutral-text focus:outline-none focus:ring-2 focus:ring-neutral-primary w-full">
+                                <template x-for="profile in profiles" :key="profile.id">
+                                    <option :value="profile.id" x-text="profile.name"></option>
+                                </template>
+                            </select>
+                            <button @click="profileManagement.showModal = true" title="Profile verwalten" class="p-2 rounded-md bg-neutral-surface border border-neutral-border hover:bg-neutral-primary hover:text-neutral-bg transition-colors flex items-center justify-center">
+                                <span class="material-symbols-outlined">settings</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="flex gap-2 mb-4">
                         <button @click="exportCards()" title="Backup erstellen" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-surface border border-neutral-border hover:bg-neutral-primary hover:text-neutral-bg transition-colors text-sm">
                             <span class="material-symbols-outlined">save</span> Export
@@ -191,7 +205,7 @@
                     <!-- Drawing Canvas -->
                     <div class="w-full h-56 min-h-0 md:flex-1 relative">
                         <canvas x-ref="drawingCanvas" class="w-full h-full bg-neutral-surface border border-neutral-border rounded-lg cursor-crosshair"></canvas>
-                        <button @click="clearCanvas()" title="Feld leeren" class="absolute bottom-2 right-2 p-2 rounded-full bg-neutral-surface/50 text-neutral-dim hover:bg-neutral-secondary hover:text-neutral-bg transition-colors">
+                        <button @click="clearCanvas()" title="Feld leeren" class="absolute bottom-2 right-2 p-2 rounded-full bg-neutral-surface/50 text-neutral-dim hover:bg-neutral-secondary hover:text-neutral-bg transition-colors flex items-center justify-center">
                             <span class="material-symbols-outlined">delete</span>
                         </button>
                     </div>
@@ -238,14 +252,58 @@
                    </form>
                </div>
            </div>
+
+            <!-- Profile Management Modal -->
+            <div x-show="profileManagement.showModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-neutral-bg bg-opacity-80 flex items-center justify-center z-50 p-4" style="display: none;">
+                <div @click.away="closeProfileModal()" class="bg-neutral-surface border border-neutral-border rounded-lg shadow-primary p-6 w-full max-w-lg">
+                    <h3 class="font-bold text-2xl text-neutral-primary mb-4">Profile verwalten</h3>
+                    
+                    <!-- Add/Edit Form -->
+                    <form @submit.prevent="saveProfile()" class="mb-6">
+                        <div class="flex gap-4">
+                            <input type="text" x-model="profileManagement.newProfileName" placeholder="Neuer Profilname" required class="flex-grow px-3 py-2 bg-neutral-bg border border-neutral-border rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-primary">
+                            <button type="submit" class="px-4 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary" x-text="profileManagement.editingProfile ? 'Umbenennen' : 'Hinzufügen'"></button>
+                            <button type="button" @click="cancelEditProfile()" x-show="profileManagement.editingProfile" class="px-4 py-2 rounded-md text-neutral-dim hover:text-neutral-primary">Abbrechen</button>
+                        </div>
+                    </form>
+
+                    <!-- Profile List -->
+                    <div class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                        <template x-for="profile in profiles" :key="profile.id">
+                            <div class="flex justify-between items-center p-2 rounded-md hover:bg-neutral-bg">
+                                <span x-text="profile.name" class="text-neutral-text"></span>
+                                <div class="flex items-center gap-2">
+                                    <button @click="editProfile(profile)" title="Umbennenen" class="p-1 text-neutral-dim hover:text-neutral-primary">
+                                        <span class="material-symbols-outlined text-base">edit</span>
+                                    </button>
+                                    <button @click="confirmDeleteProfile(profile)" title="Löschen" class="p-1 text-neutral-dim hover:text-neutral-secondary" :disabled="profiles.length <= 1">
+                                        <span class="material-symbols-outlined text-base">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="flex justify-end mt-6">
+                        <button type="button" @click="closeProfileModal()" class="px-4 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary">Schließen</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
-
+ 
     <script>
         function flashcardTrainer() {
             return {
-                cards: [],
-                allCards: [],
+                // Data State
+                profiles: [],
+                activeProfileId: null,
+                cardData: {}, // { profileId: [cards], ... }
+
+                // View/UI State
+                cards: [], // The shuffled, currently active card set for training
+                allCards: [], // The full, sorted list of cards for the active profile
                 currentIndex: 0,
                 currentCard: { id: 0, front: 'Lade...', back: '...' },
                 flipped: false,
@@ -255,44 +313,107 @@
                 showAddCardModal: false,
                 newCard: { id: null, front: '', back: '' },
                 editingCard: null,
+                
+                // Profile Management State
+                profileManagement: {
+                    showModal: false,
+                    newProfileName: '',
+                    editingProfile: null,
+                },
+
+                // Canvas State
                 drawing: false,
                 canvasContext: null,
                 touchStartX: 0,
-
+ 
                 get sortedCards() {
                     return [...this.allCards].sort((a, b) => a.front.localeCompare(b.front));
                 },
-
+ 
                 init() {
+                    this.loadData();
+                    this.loadProfile(this.activeProfileId);
+                    this.initCanvas();
+                },
+
+                loadData() {
+                    const savedData = localStorage.getItem('discere_data');
+                    if (savedData) {
+                        try {
+                            const data = JSON.parse(savedData);
+                            if (data.profiles && data.activeProfileId && data.cardData) {
+                                this.profiles = data.profiles;
+                                this.activeProfileId = data.activeProfileId;
+                                this.cardData = data.cardData;
+                                return;
+                            }
+                        } catch (e) {
+                            console.error("Fehler beim Laden der Profildaten.", e);
+                        }
+                    }
+                    // If loading fails or no data, check for old data to migrate
+                    this.migrateOldData();
+                },
+
+                migrateOldData() {
                     const savedCards = localStorage.getItem('discere_cards');
+                    this.setupDefaultProfile(); // Setup default structure first
                     if (savedCards) {
                         try {
                             const parsedCards = JSON.parse(savedCards);
                             if (Array.isArray(parsedCards)) {
-                                this.allCards = parsedCards;
+                                this.cardData[this.activeProfileId] = parsedCards.map(c => ({...c, id: c.id || Date.now() + Math.random()}));
+                                console.log("Alte Daten wurden in das neue Profil 'Default' migriert.");
+                                // localStorage.removeItem('discere_cards'); // Clean up old data
                             }
                         } catch (e) {
-                            console.error("Fehler beim Laden der Karten.", e);
+                            console.error("Fehler bei der Migration der alten Kartendaten.", e);
                         }
                     }
-                    
+                    this.saveData();
+                },
+
+                setupDefaultProfile() {
+                    this.profiles = [{ id: Date.now(), name: 'Default' }];
+                    this.activeProfileId = this.profiles[0].id;
+                    this.cardData = { [this.activeProfileId]: [] };
+                },
+
+                loadProfile(profileId) {
+                    if (!this.cardData[profileId]) {
+                        this.cardData[profileId] = [];
+                    }
+                    this.allCards = this.cardData[profileId];
                     this.cards = [...this.allCards];
                     this.shuffleCards();
+                    this.currentIndex = 0;
                     if (this.cards.length > 0) {
                         this.currentCard = this.cards[0];
                     } else {
                         this.currentCard = { id: 0, front: 'Keine Karten', back: 'Füge eine neue Karte hinzu!' };
                     }
-                    this.initCanvas();
+                    this.flipped = false;
+                    this.clearCanvas();
                 },
 
+                saveData() {
+                    // Make sure the current state of allCards is in cardData before saving
+                    this.cardData[this.activeProfileId] = this.allCards;
+                    const dataToSave = {
+                        profiles: this.profiles,
+                        activeProfileId: this.activeProfileId,
+                        cardData: this.cardData
+                    };
+                    localStorage.setItem('discere_data', JSON.stringify(dataToSave));
+                },
+ 
                 shuffleCards() {
                     for (let i = this.cards.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
                     }
                 },
-
+ 
                 nextCard() {
                     this.flipped = false;
                     this.clearCanvas();
@@ -308,7 +429,7 @@
                         this.currentCard = this.cards[this.currentIndex];
                     }, 300);
                 },
-
+ 
                 previousCard() {
                     this.flipped = false;
                     this.clearCanvas();
@@ -316,26 +437,23 @@
                         if (this.cards.length === 0) return;
                         this.currentIndex--;
                         if (this.currentIndex < 0) {
-                            this.currentIndex = this.cards.length - 1; // Loop to the end
+                            this.currentIndex = this.cards.length - 1;
                         }
                         this.currentCard = this.cards[this.currentIndex];
                     }, 300);
                 },
-
+ 
                 handleTouchStart(event) {
                     this.touchStartX = event.touches[0].clientX;
                 },
-
+ 
                 handleTouchEnd(event) {
                     const touchEndX = event.changedTouches[0].clientX;
                     const swipeDiff = this.touchStartX - touchEndX;
-                    if (swipeDiff > 50) { // Swipe left
-                        this.nextCard();
-                    } else if (swipeDiff < -50) { // Swipe right
-                        this.previousCard();
-                    }
+                    if (swipeDiff > 50) { this.nextCard(); }
+                    else if (swipeDiff < -50) { this.previousCard(); }
                 },
-
+ 
                 updateSearchResults() {
                     const term = this.searchTerm.trim().toLowerCase();
                     if (term === '') {
@@ -347,7 +465,7 @@
                         card.back.toLowerCase().includes(term)
                     ).slice(0, 10);
                 },
-
+ 
                 selectCard(card) {
                     this.currentCard = card;
                     this.flipped = false;
@@ -360,7 +478,7 @@
                     }
                     this.cardListVisible = false;
                 },
-
+ 
                 resetSearch() {
                     this.searchTerm = '';
                     this.searchResults = [];
@@ -371,123 +489,175 @@
                        this.currentCard = this.cards[0];
                     }
                 },
-
+ 
                 exportCards() {
                     if (this.allCards.length === 0) {
                         alert('Keine Karten zum Exportieren vorhanden.');
                         return;
                     }
+                    const activeProfile = this.profiles.find(p => p.id == this.activeProfileId);
+                    const profileName = activeProfile ? activeProfile.name : 'backup';
+                    const filename = `discere-backup-${profileName}.json`;
+
                     const cardsToExport = this.allCards.map(({ id, ...rest }) => rest);
                     const dataStr = JSON.stringify(cardsToExport, null, 2);
                     const dataBlob = new Blob([dataStr], { type: 'application/json' });
                     const url = URL.createObjectURL(dataBlob);
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = 'discere-backup.json';
+                    link.download = filename;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
                     URL.revokeObjectURL(url);
                 },
-
+ 
                 importCards(event) {
                     const file = event.target.files[0];
                     if (!file) return;
-
+ 
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         try {
                             let content = e.target.result;
-                            // Remove BOM (Byte Order Mark) if present
-                            if (content.charCodeAt(0) === 0xFEFF) {
-                                content = content.slice(1);
-                            }
+                            if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
+                            
                             const importedCards = JSON.parse(content);
                             if (Array.isArray(importedCards) && (importedCards.length === 0 || (importedCards[0].front && importedCards[0].back))) {
-                                this.allCards = importedCards.map(c => ({...c, id: c.id || Date.now() + Math.random()}));
-                                this.saveToLocalStorage();
-                                this.init();
-                                alert(`${importedCards.length} Karten erfolgreich importiert!`);
+                                const newCards = importedCards.map(c => ({...c, id: Date.now() + Math.random()}));
+                                this.allCards.push(...newCards);
+                                this.saveData();
+                                this.loadProfile(this.activeProfileId);
+                                alert(`${importedCards.length} Karten erfolgreich in das Profil '${this.profiles.find(p => p.id == this.activeProfileId).name}' importiert!`);
                             } else {
-                                alert('Ungültiges Dateiformat. Die Datei muss eine Liste von Objekten mit "front" und "back" Schlüsseln sein.');
+                                alert('Ungültiges Dateiformat.');
                             }
                         } catch (error) {
                             console.error("Import-Fehler:", error);
-                            alert('Fehler beim Verarbeiten der Datei. Stellen Sie sicher, dass es sich um eine gültige JSON-Datei im UTF-8 Format handelt.');
+                            alert('Fehler beim Verarbeiten der Datei.');
                         }
                     };
                     reader.readAsText(file);
                     event.target.value = '';
                 },
-                
-                saveToLocalStorage() {
-                    localStorage.setItem('discere_cards', JSON.stringify(this.allCards));
-                },
-
+ 
                 swapSides() {
-                    if (!confirm('Möchten Sie die Vorder- und Rückseiten aller Karten tauschen?')) return;
-                    
-                    this.allCards = this.allCards.map(card => {
-                        return { ...card, front: card.back, back: card.front };
-                    });
-
-                    this.saveToLocalStorage();
-                    this.init(); // Re-initialize the state to show changes
+                    if (!confirm('Möchten Sie die Vorder- und Rückseiten aller Karten in diesem Profil tauschen?')) return;
+                    this.allCards = this.allCards.map(card => ({ ...card, front: card.back, back: card.front }));
+                    this.saveData();
+                    this.loadProfile(this.activeProfileId);
                     alert('Die Seiten aller Karten wurden getauscht.');
                 },
-
+ 
                 deleteCard(cardToDelete) {
                     if (confirm(`Möchten Sie die Karte "${cardToDelete.front}" wirklich löschen?`)) {
                         this.allCards = this.allCards.filter(card => card.id !== cardToDelete.id);
-                        this.saveToLocalStorage();
-                        
-                        if (this.currentCard.id === cardToDelete.id) {
-                           this.currentIndex = 0;
-                        }
-                        this.init(); // Re-initialize to update state
+                        this.saveData();
+                        this.loadProfile(this.activeProfileId);
                         alert('Karte gelöscht.');
                     }
                 },
-
+ 
                 editCard(card) {
                     this.editingCard = card;
                     this.newCard = { ...card };
                     this.showAddCardModal = true;
                 },
-
+ 
                 closeModal() {
                     this.showAddCardModal = false;
                     this.editingCard = null;
                     this.newCard = { id: null, front: '', back: '' };
                 },
-
+ 
                 saveCard() {
                     if (!this.newCard.front.trim() || !this.newCard.back.trim()) {
                         alert('Vorder- und Rückseite dürfen nicht leer sein.');
                         return;
                     }
-
+ 
                     if (this.editingCard) {
                         const index = this.allCards.findIndex(c => c.id === this.editingCard.id);
-                        if (index !== -1) {
-                            this.allCards[index] = { ...this.newCard };
-                        }
+                        if (index !== -1) this.allCards[index] = { ...this.newCard };
                     } else {
                         const exists = this.allCards.some(c => c.front.toLowerCase() === this.newCard.front.toLowerCase());
-                        if (exists) {
-                            if (!confirm('Eine Karte mit dieser Vorderseite existiert bereits. Trotzdem hinzufügen?')) {
-                                return;
-                            }
+                        if (exists && !confirm('Eine Karte mit dieser Vorderseite existiert bereits. Trotzdem hinzufügen?')) {
+                            return;
                         }
                         this.allCards.push({ ...this.newCard, id: Date.now() });
                     }
-
-                    this.saveToLocalStorage();
-                    this.init();
+ 
+                    this.saveData();
+                    this.loadProfile(this.activeProfileId);
                     this.closeModal();
-                    alert(this.editingCard ? 'Karte erfolgreich aktualisiert!' : 'Neue Karte erfolgreich hinzugefügt!');
+                    alert(this.editingCard ? 'Karte aktualisiert!' : 'Karte hinzugefügt!');
                 },
 
+                // --- Profile Management Methods ---
+                switchProfile(id) {
+                    this.activeProfileId = id;
+                    this.saveData();
+                    this.loadProfile(id);
+                },
+
+                closeProfileModal() {
+                    this.profileManagement.showModal = false;
+                    this.profileManagement.newProfileName = '';
+                    this.profileManagement.editingProfile = null;
+                },
+
+                saveProfile() {
+                    const name = this.profileManagement.newProfileName.trim();
+                    if (!name) {
+                        alert('Profilname darf nicht leer sein.');
+                        return;
+                    }
+
+                    if (this.profileManagement.editingProfile) {
+                        // Rename
+                        const profile = this.profiles.find(p => p.id === this.profileManagement.editingProfile.id);
+                        if (profile) profile.name = name;
+                    } else {
+                        // Add new
+                        const newProfile = { id: Date.now(), name: name };
+                        this.profiles.push(newProfile);
+                        this.cardData[newProfile.id] = [];
+                        this.activeProfileId = newProfile.id;
+                        this.loadProfile(newProfile.id);
+                    }
+                    
+                    this.saveData();
+                    this.closeProfileModal();
+                },
+
+                editProfile(profile) {
+                    this.profileManagement.editingProfile = profile;
+                    this.profileManagement.newProfileName = profile.name;
+                },
+
+                cancelEditProfile() {
+                    this.profileManagement.editingProfile = null;
+                    this.profileManagement.newProfileName = '';
+                },
+
+                confirmDeleteProfile(profile) {
+                    if (this.profiles.length <= 1) {
+                        alert('Das letzte Profil kann nicht gelöscht werden.');
+                        return;
+                    }
+                    if (confirm(`Möchten Sie das Profil "${profile.name}" und alle zugehörigen Karten wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) {
+                        this.profiles = this.profiles.filter(p => p.id !== profile.id);
+                        delete this.cardData[profile.id];
+
+                        if (this.activeProfileId === profile.id) {
+                            this.activeProfileId = this.profiles[0].id;
+                            this.loadProfile(this.activeProfileId);
+                        }
+                        
+                        this.saveData();
+                    }
+                },
+ 
                initCanvas() {
                    this.$nextTick(() => {
                        const canvas = this.$refs.drawingCanvas;
