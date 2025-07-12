@@ -1,6 +1,6 @@
 const CACHE_NAME = 'discere-cache-v1';
 const urlsToCache = [
-  'discere.html',
+  'index.html',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js',
   'https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap',
