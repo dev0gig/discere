@@ -21,6 +21,9 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    screens: {
+                        '2xl': '1500px',
+                    },
                     fontFamily: {
                         sans: ['Ubuntu', 'sans-serif'],
                     },
@@ -106,14 +109,14 @@
 
     <div class="container mx-auto p-4 h-full">
 
-        <div class="flex flex-col xl:flex-row xl:gap-8 w-full h-full">
+        <div class="flex flex-col 2xl:flex-row 2xl:gap-8 w-full h-full">
 
-            <aside class="fixed inset-0 z-40 transform transition-transform duration-300 ease-in-out xl:relative xl:inset-auto xl:w-1/3 xl:transform-none xl:z-auto glass" :class="{'translate-y-0': cardListVisible, 'translate-y-full': !cardListVisible}">
+            <aside class="fixed inset-0 z-40 transform transition-transform duration-300 ease-in-out 2xl:relative 2xl:inset-auto 2xl:w-1/3 2xl:transform-none 2xl:z-auto glass" :class="{'translate-y-0': cardListVisible, 'translate-y-full': !cardListVisible}">
                 <div class="p-4 h-full flex flex-col relative">
                     <div class="flex-shrink-0">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="font-bold text-2xl text-neutral-primary">Kartenliste</h2>
-                            <button @click="cardListVisible = false" class="xl:hidden p-1 rounded-md hover:bg-neutral-border">
+                            <button @click="cardListVisible = false" class="2xl:hidden p-1 rounded-md hover:bg-neutral-border">
                                 <span class="material-symbols-outlined">close</span>
                             </button>
                         </div>
@@ -121,7 +124,7 @@
                         <div class="flex gap-2 mb-4">
                             <button @click="showAddCardModal = true" title="Neue Karte" class="flex-grow p-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary transition-shadow flex items-center justify-center">
                                 <span class="material-symbols-outlined">add_circle</span>
-                                <span class="ml-2 hidden xl:inline">Neue Karte</span>
+                                <span class="ml-2 hidden 2xl:inline">Neue Karte</span>
                             </button>
                             <button @click="showHelpModal = true" title="Anleitung" class="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center justify-center">
                                <span class="material-symbols-outlined">help</span>
@@ -170,9 +173,9 @@
                 </div>
             </aside>
 
-            <main class="w-full xl:w-2/3 flex-shrink-0 flex flex-col p-2 h-full pb-20 xl:pb-2">
+            <main class="w-full 2xl:w-2/3 flex-shrink-0 flex flex-col p-2 h-full pb-20 2xl:pb-2">
                 <div class="flex-shrink-0">
-                    <p class="text-center text-neutral-dim mb-4 xl:hidden">Klicke auf die Karte, um sie umzudrehen.</p>
+                    <p class="text-center text-neutral-dim mb-4 2xl:hidden">Klicke auf die Karte, um sie umzudrehen.</p>
 
 
                 </div>
@@ -187,7 +190,7 @@
                     </div>
 
                     <!-- Card -->
-                    <div @touchstart="handleTouchStart($event)" @touchend="handleTouchEnd($event)" style="perspective: 1000px;" class="w-full h-56 flex-shrink-0 min-h-0 xl:flex-1 relative">
+                    <div @touchstart="handleTouchStart($event)" @touchend="handleTouchEnd($event)" style="perspective: 1000px;" class="w-full h-56 flex-shrink-0 min-h-0 2xl:flex-1 relative">
                         <!-- Nav Arrows -->
                         <button @click="previousCard()" class="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full text-neutral-dim hover:text-neutral-primary transition-colors">
                             <span class="material-symbols-outlined">chevron_left</span>
@@ -199,12 +202,12 @@
                         <div class="relative w-full h-full card" :class="{ 'is-flipped': flipped }">
                             <div @click="flipped = !flipped"
                                 class="absolute w-full h-full card-face glass flex items-center justify-center cursor-pointer shadow-primary p-4 overflow-hidden">
-                                <p class="text-3xl xl:text-4xl font-bold text-neutral-text text-center"
+                                <p class="text-3xl 2xl:text-4xl font-bold text-neutral-text text-center"
                                     x-text="sidesSwapped ? currentCard.back : currentCard.front" x-ref="cardFrontText"></p>
                             </div>
                             <div @click="flipped = !flipped"
                                 class="absolute w-full h-full card-face card-back glass flex flex-col items-center justify-center cursor-pointer shadow-primary p-4 overflow-hidden">
-                                <p class="text-3xl xl:text-4xl font-bold text-neutral-primary text-center"
+                                <p class="text-3xl 2xl:text-4xl font-bold text-neutral-primary text-center"
                                     x-text="sidesSwapped ? currentCard.front : currentCard.back" x-ref="cardBackText"></p>
                             </div>
                         </div>
@@ -366,7 +369,7 @@
            </div>
     
       <!-- Bottom Bar -->
-        <div class="xl:hidden fixed bottom-0 left-0 right-0 h-16 flex items-center justify-between px-4 z-30 bottom-bar-glass">
+        <div class="2xl:hidden fixed bottom-0 left-0 right-0 h-16 flex items-center justify-between px-4 z-30 bottom-bar-glass">
             <h1 class="font-bold text-2xl text-neutral-primary">Discere</h1>
             <button @click="cardListVisible = !cardListVisible" class="p-2">
                 <span class="material-symbols-outlined text-3xl">menu</span>
