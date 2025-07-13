@@ -107,35 +107,42 @@
                         </button>
                         <input type="file" x-ref="importInput" @change="importCards($event)" class="hidden" accept=".json">
                     </div>
-
-                    <div class="mb-4">
-                        <button @click="showAddCardModal = true" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary transition-shadow">
+ 
+                    <div class="flex gap-2 mb-4">
+                        <button @click="showAddCardModal = true" class="flex-grow flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary transition-shadow">
                             <span class="material-symbols-outlined">add_circle</span> Neue Karte
                         </button>
+                        <button x-show="selectedCards.length > 0" x-transition @click="deleteSelectedCards()" title="Ausgewählte löschen" class="flex-shrink-0 flex items-center justify-center p-2 rounded-md bg-neutral-secondary text-neutral-bg font-bold hover:shadow-lg transition-shadow">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
                     </div>
- 
-                    <div x-ref="cardListContainer" class="flex-grow overflow-y-auto pr-2 custom-scrollbar">
-                        <template x-for="card in sortedCards" :key="card.id">
-                            <div class="flex justify-between items-center group">
-                                <div @click="selectCard(card); cardListVisible = false" class="flex-grow px-3 py-2 cursor-pointer hover:bg-neutral-primary hover:text-neutral-bg rounded-md text-sm flex justify-between items-center">
-                                    <span x-text="card.front"></span>
-                                    <span class="text-neutral-dim text-right" x-text="card.back"></span>
+
+                    <div @click.away="selectedCards = []; lastSelectedCardId = null">
+                        <div x-ref="cardListContainer" class="flex-grow overflow-y-auto pr-2 custom-scrollbar">
+                            <template x-for="card in sortedCards" :key="card.id">
+                                <div class="flex justify-between items-center group">
+                                    <div @click="handleCardClick(card, $event)"
+                                         :class="selectedCards.includes(card.id) ? 'bg-neutral-primary text-neutral-bg' : 'hover:bg-neutral-primary hover:text-neutral-bg'"
+                                         class="flex-grow px-3 py-2 cursor-pointer rounded-md text-sm flex justify-between items-center">
+                                        <span x-text="card.front"></span>
+                                        <span class="text-neutral-dim text-right" :class="{'text-neutral-bg': selectedCards.includes(card.id)}" x-text="card.back"></span>
+                                    </div>
+                                    <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button @click.stop="editCard(card)" class="p-1 text-neutral-dim hover:text-neutral-primary">
+                                            <span class="material-symbols-outlined text-base">edit</span>
+                                        </button>
+                                        <button @click.stop="deleteCard(card)" class="p-1 text-neutral-dim hover:text-neutral-secondary">
+                                            <span class="material-symbols-outlined text-base">delete</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button @click.stop="editCard(card)" class="p-1 text-neutral-dim hover:text-neutral-primary">
-                                        <span class="material-symbols-outlined text-base">edit</span>
-                                    </button>
-                                    <button @click.stop="deleteCard(card)" class="p-1 text-neutral-dim hover:text-neutral-secondary">
-                                        <span class="material-symbols-outlined text-base">delete</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
                     </div>
                 </div>
             </aside>
 
-            <main class="w-full md:w-2/3 flex-shrink-0 flex flex-col p-2">
+            <main class="w-full md:w-2/3 flex-shrink-0 flex flex-col p-2 h-full pb-24 md:pb-2">
                 <div class="flex-shrink-0">
                     <div class="flex items-center justify-center mb-4">
                         <h1 class="font-bold text-3xl md:text-4xl text-neutral-primary text-center">
@@ -163,7 +170,16 @@
                 </div>
 
                 <div class="flex-grow flex flex-col gap-4 min-h-0">
-                    <div @touchstart="handleTouchStart($event)" @touchend="handleTouchEnd($event)" style="perspective: 1000px;" class="w-full h-56 min-h-0 md:flex-1 relative">
+                    <!-- Drawing Canvas -->
+                    <div class="flex-1 w-full min-h-0 relative">
+                        <canvas x-ref="drawingCanvas" class="w-full h-full bg-neutral-surface border border-neutral-border rounded-lg cursor-crosshair"></canvas>
+                        <button @click="clearCanvas()" title="Feld leeren" class="absolute bottom-2 right-2 p-2 rounded-full bg-neutral-surface/50 text-neutral-dim hover:bg-neutral-secondary hover:text-neutral-bg transition-colors flex items-center justify-center">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
+                    </div>
+
+                    <!-- Card -->
+                    <div @touchstart="handleTouchStart($event)" @touchend="handleTouchEnd($event)" style="perspective: 1000px;" class="w-full h-56 flex-shrink-0 min-h-0 md:flex-1 relative">
                         <!-- Mobile Nav Arrows -->
                         <button @click="previousCard()" class="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-neutral-surface/50 text-neutral-dim hover:bg-neutral-primary hover:text-neutral-bg transition-colors sm:hidden">
                             <span class="material-symbols-outlined">chevron_left</span>
@@ -175,23 +191,21 @@
                         <div class="relative w-full h-full card" :class="{ 'is-flipped': flipped }">
                             <div @click="flipped = !flipped"
                                 class="absolute w-full h-full card-face bg-neutral-surface border border-neutral-border rounded-lg flex items-center justify-center cursor-pointer shadow-primary p-4 overflow-hidden">
+                                <button @click.stop="swapSides()" title="Seiten tauschen" class="absolute top-2 right-2 p-2 rounded-full text-neutral-dim hover:text-neutral-primary hover:bg-neutral-bg/50 transition-colors z-10">
+                                    <span class="material-symbols-outlined">sync</span>
+                                </button>
                                 <p class="text-3xl md:text-4xl font-bold text-neutral-text text-center"
                                     x-text="currentCard.front" x-ref="cardFrontText"></p>
                             </div>
                             <div @click="flipped = !flipped"
                                 class="absolute w-full h-full card-face card-back bg-neutral-border/20 border border-neutral-border rounded-lg flex flex-col items-center justify-center cursor-pointer shadow-primary p-4 overflow-hidden">
+                                <button @click.stop="swapSides()" title="Seiten tauschen" class="absolute top-2 right-2 p-2 rounded-full text-neutral-dim hover:text-neutral-primary hover:bg-neutral-bg/50 transition-colors z-10">
+                                    <span class="material-symbols-outlined">sync</span>
+                                </button>
                                 <p class="text-3xl md:text-4xl font-bold text-neutral-primary text-center"
                                     x-text="currentCard.back" x-ref="cardBackText"></p>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Drawing Canvas -->
-                    <div class="w-full h-56 min-h-0 md:flex-1 relative">
-                        <canvas x-ref="drawingCanvas" class="w-full h-full bg-neutral-surface border border-neutral-border rounded-lg cursor-crosshair"></canvas>
-                        <button @click="clearCanvas()" title="Feld leeren" class="absolute bottom-2 right-2 p-2 rounded-full bg-neutral-surface/50 text-neutral-dim hover:bg-neutral-secondary hover:text-neutral-bg transition-colors flex items-center justify-center">
-                            <span class="material-symbols-outlined">delete</span>
-                        </button>
                     </div>
                 </div>
 
@@ -205,10 +219,6 @@
                             class="flex items-center gap-2 px-6 py-3 rounded-md bg-neutral-secondary text-neutral-bg font-bold hover:shadow-primary transition-shadow text-lg w-full sm:w-auto justify-center">
                             Suche zurücksetzen <span class="material-symbols-outlined">refresh</span>
                         </button>
-                       <button @click="swapSides()" title="Seiten tauschen"
-                           class="flex items-center gap-2 px-4 py-3 rounded-md bg-neutral-surface border border-neutral-border text-neutral-dim hover:bg-neutral-primary hover:text-neutral-bg transition-colors">
-                           <span class="material-symbols-outlined">sync</span>
-                       </button>
                     </div>
                 </div>
             </main>
@@ -264,8 +274,9 @@
                 showAddCardModal: false,
                 newCard: { id: null, front: '', back: '' },
                 editingCard: null,
-                
-
+                selectedCards: [],
+                lastSelectedCardId: null,
+ 
                 // Canvas State
                 drawing: false,
                 canvasContext: null,
@@ -281,7 +292,25 @@
 
                     this.$watch('currentCard', () => this.adjustFontSize());
                     this.$watch('flipped', () => this.adjustFontSize());
-                    window.addEventListener('resize', () => this.adjustFontSize());
+                    let resizeTimeout;
+                    window.addEventListener('resize', () => {
+                        clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            this.adjustFontSize();
+                            
+                            this.$nextTick(() => {
+                                const canvas = this.$refs.drawingCanvas;
+                                if (!canvas || !this.canvasContext) return;
+                                canvas.width = canvas.offsetWidth;
+                                canvas.height = canvas.offsetHeight;
+                                // Re-apply styles as they can be reset
+                                this.canvasContext.strokeStyle = '#bb86fc';
+                                this.canvasContext.lineWidth = 3;
+                                this.canvasContext.lineCap = 'round';
+                                this.canvasContext.lineJoin = 'round';
+                            });
+                        }, 150);
+                    });
                 },
 
                 loadCards() {
@@ -386,6 +415,44 @@
                         this.currentIndex = foundIndex;
                     }
                     this.cardListVisible = false;
+                    this.selectedCards = [card.id];
+                    this.lastSelectedCardId = card.id;
+                },
+
+                handleCardClick(card, event) {
+                    const cardId = card.id;
+
+                    if (event.shiftKey && this.lastSelectedCardId) {
+                        event.preventDefault();
+                        const lastIndex = this.sortedCards.findIndex(c => c.id === this.lastSelectedCardId);
+                        const currentIndex = this.sortedCards.findIndex(c => c.id === cardId);
+                        
+                        const start = Math.min(lastIndex, currentIndex);
+                        const end = Math.max(lastIndex, currentIndex);
+
+                        const rangeIds = this.sortedCards.slice(start, end + 1).map(c => c.id);
+                        
+                        if (event.ctrlKey) {
+                             rangeIds.forEach(id => {
+                                if (!this.selectedCards.includes(id)) {
+                                    this.selectedCards.push(id);
+                                }
+                            });
+                        } else {
+                            this.selectedCards = rangeIds;
+                        }
+
+                    } else if (event.ctrlKey) {
+                        event.preventDefault();
+                        if (this.selectedCards.includes(cardId)) {
+                            this.selectedCards = this.selectedCards.filter(id => id !== cardId);
+                        } else {
+                            this.selectedCards.push(cardId);
+                        }
+                        this.lastSelectedCardId = cardId;
+                    } else {
+                        this.selectCard(card);
+                    }
                 },
  
                 resetSearch() {
@@ -446,20 +513,30 @@
                 },
  
                 swapSides() {
-                    if (!confirm('Möchten Sie die Vorder- und Rückseiten aller Karten tauschen?')) return;
-                    
                     this.allCards = this.allCards.map(card => ({ ...card, front: card.back, back: card.front }));
                     this.saveCards();
                     this.loadCards();
-                    alert('Die Seiten aller Karten wurden getauscht.');
                 },
- 
+
                 deleteCard(cardToDelete) {
                     if (confirm(`Möchten Sie die Karte "${cardToDelete.front}" wirklich löschen?`)) {
                         this.allCards = this.allCards.filter(card => card.id !== cardToDelete.id);
+                        this.selectedCards = this.selectedCards.filter(id => id !== cardToDelete.id);
                         this.saveCards();
                         this.loadCards();
                         alert('Karte gelöscht.');
+                    }
+                },
+
+                deleteSelectedCards() {
+                    if (this.selectedCards.length === 0) return;
+                    if (confirm(`Möchten Sie die ${this.selectedCards.length} ausgewählten Karten wirklich löschen?`)) {
+                        this.allCards = this.allCards.filter(card => !this.selectedCards.includes(card.id));
+                        this.selectedCards = [];
+                        this.lastSelectedCardId = null;
+                        this.saveCards();
+                        this.loadCards();
+                        alert('Ausgewählte Karten gelöscht.');
                     }
                 },
  
