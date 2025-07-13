@@ -148,15 +148,15 @@
                     <div @click.away="selectedCards = []; lastSelectedCardId = null" class="flex-grow min-h-0">
                         <div x-ref="cardListContainer" class="h-full overflow-y-auto pr-2 custom-scrollbar">
                             <template x-for="card in sortedCards" :key="card.id">
-                                <div class="flex justify-between items-center group">
+                                <div class="flex justify-between items-center group hover:bg-neutral-surface rounded-md">
                                     <div @click="handleCardClick(card, $event)"
                                          @touchstart="handleCardTouchStart(card, $event)"
                                          @touchend="handleCardTouchEnd(card, $event)"
                                          @touchmove="handleCardTouchMove()"
-                                         :class="selectedCards.includes(card.id) ? 'bg-neutral-primary text-neutral-bg' : 'hover:bg-neutral-primary/80'"
-                                         class="flex-grow px-3 py-2 cursor-pointer rounded-md text-sm flex justify-between items-center transition-colors duration-200">
-                                        <span x-text="card.front"></span>
-                                        <span class="text-neutral-dim text-right" :class="{'text-neutral-bg': selectedCards.includes(card.id)}" x-text="card.back"></span>
+                                         :class="selectedCards.includes(card.id) ? 'bg-neutral-primary text-neutral-bg' : ''"
+                                         class="flex-grow px-3 py-2 cursor-pointer rounded-md text-sm grid grid-cols-2 items-center transition-colors duration-200">
+                                       <span class="truncate" x-text="card.front"></span>
+                                       <span class="text-neutral-dim text-right truncate" :class="{'text-neutral-bg': selectedCards.includes(card.id)}" x-text="card.back"></span>
                                     </div>
                                     <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button @click.stop="editCard(card)" title="Bearbeiten" class="p-1 text-neutral-dim hover:text-neutral-primary">
@@ -173,7 +173,7 @@
                 </div>
             </aside>
 
-            <main class="w-full 2xl:w-2/3 flex-shrink-0 flex flex-col p-2 h-full pb-20 2xl:pb-2">
+            <main class="w-full 2xl:w-2/3 flex-shrink-0 flex flex-col p-2 h-full pb-24 2xl:pb-2">
                 <div class="flex-shrink-0">
                     <p class="text-center text-neutral-dim mb-4 2xl:hidden">Klicke auf die Karte, um sie umzudrehen.</p>
 
