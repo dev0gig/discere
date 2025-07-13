@@ -89,7 +89,7 @@
 
         <div class="flex flex-col md:flex-row md:gap-8 w-full h-full">
 
-            <aside class="fixed top-0 left-0 h-full w-64 bg-neutral-surface/95 backdrop-blur-sm z-20 transform transition-transform duration-300 ease-in-out md:relative md:w-1/3 md:bg-transparent md:transform-none md:backdrop-filter-none" :class="{'translate-x-0': cardListVisible, '-translate-x-full': !cardListVisible}">
+            <aside class="fixed inset-0 bg-neutral-surface z-40 transform transition-transform duration-300 ease-in-out md:relative md:inset-auto md:w-1/3 md:bg-transparent md:transform-none md:z-auto" :class="{'translate-y-0': cardListVisible, 'translate-y-full': !cardListVisible}">
                 <div class="p-4 h-full flex flex-col relative">
                     <div class="flex-shrink-0">
                         <div class="flex justify-between items-center mb-4">
@@ -147,30 +147,10 @@
                 </div>
             </aside>
 
-            <main class="w-full md:w-2/3 flex-shrink-0 flex flex-col p-2 h-full pb-24 md:pb-2">
+            <main class="w-full md:w-2/3 flex-shrink-0 flex flex-col p-2 h-full pb-20 md:pb-2">
                 <div class="flex-shrink-0">
-                    <div class="flex items-center justify-center mb-4">
-                        <h1 class="font-bold text-3xl md:text-4xl text-neutral-primary text-center">
-                            Discere</h1>
-                    </div>
-                    <p class="text-center text-neutral-dim mb-6 md:mb-8">Klicke auf die Karte, um sie umzudrehen.</p>
+                    <p class="text-center text-neutral-dim mb-4 md:hidden">Klicke auf die Karte, um sie umzudrehen.</p>
 
-                    <div class="mb-4 w-full relative">
-                        <input type="text" x-model="searchTerm" @input.debounce.300ms="updateSearchResults()"
-                            placeholder="Karte suchen..."
-                            class="w-full px-4 py-2 bg-neutral-surface border border-neutral-border rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-primary text-neutral-text">
-
-                        <div x-show="searchResults.length > 0" x-transition
-                            class="absolute z-10 w-full mt-1 bg-neutral-surface border border-neutral-border rounded-md max-h-60 overflow-y-auto shadow-lg">
-                            <template x-for="card in searchResults" :key="card.id">
-                                <div @click="selectCard(card)"
-                                    class="px-4 py-2 cursor-pointer hover:bg-neutral-primary hover:text-neutral-bg flex justify-between items-center">
-                                    <span x-text="card.front"></span>
-                                    <span class="text-neutral-dim text-right" x-text="card.back"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
 
                 </div>
 
@@ -215,6 +195,22 @@
                 </div>
 
                 <div class="flex-shrink-0 mt-4">
+                    <div class="mb-4 w-full relative">
+                        <input type="text" x-model="searchTerm" @input.debounce.300ms="updateSearchResults()"
+                            placeholder="Karte suchen..."
+                            class="w-full px-4 py-2 bg-neutral-surface border border-neutral-border rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-primary text-neutral-text">
+
+                        <div x-show="searchResults.length > 0" x-transition
+                            class="absolute z-10 w-full bottom-full mb-1 bg-neutral-surface border border-neutral-border rounded-md max-h-60 overflow-y-auto shadow-lg">
+                            <template x-for="card in searchResults" :key="card.id">
+                                <div @click="selectCard(card)"
+                                    class="px-4 py-2 cursor-pointer hover:bg-neutral-primary hover:text-neutral-bg flex justify-between items-center">
+                                    <span x-text="card.front"></span>
+                                    <span class="text-neutral-dim text-right" x-text="card.back"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
                      <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-4">
                         <button @click="nextCard()"
                             class="hidden sm:flex items-center gap-2 px-6 py-3 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary transition-shadow text-lg w-full sm:w-auto justify-center">
@@ -228,7 +224,6 @@
                 </div>
             </main>
 
-            <div x-show="cardListVisible" @click="cardListVisible = false" class="fixed inset-0 bg-black/50 z-10 md:hidden" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
 
            <div x-show="showAddCardModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-neutral-bg bg-opacity-80 flex items-center justify-center z-50 p-4" style="display: none;">
                <div @click.away="closeModal()" class="bg-neutral-surface border border-neutral-border rounded-lg shadow-primary p-6 w-full max-w-md">
@@ -254,11 +249,13 @@
 
         </div>
     
-        <!-- FAB for mobile menu -->
-        <button @click="cardListVisible = !cardListVisible"
-                class="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 flex items-center justify-center rounded-full bg-neutral-primary text-neutral-bg shadow-lg hover:shadow-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-neutral-bg focus:ring-neutral-primary transition-all hover:scale-110">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
+        <!-- Bottom Bar -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-surface border-t border-neutral-border h-16 flex items-center justify-between px-4 z-30">
+            <h1 class="font-bold text-2xl text-neutral-primary">Discere</h1>
+            <button @click="cardListVisible = !cardListVisible" class="p-2">
+                <span class="material-symbols-outlined text-3xl">menu</span>
+            </button>
+        </div>
     </div>
  
     <script>
