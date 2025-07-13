@@ -78,6 +78,7 @@
         .custom-scrollbar {
             scrollbar-width: thin;
             scrollbar-color: #444444 transparent; /* thumb track */
+            -webkit-overflow-scrolling: touch;
         }
     </style>
 </head>
@@ -90,38 +91,42 @@
 
             <aside class="fixed top-0 left-0 h-full w-64 bg-neutral-surface/95 backdrop-blur-sm z-20 transform transition-transform duration-300 ease-in-out md:relative md:w-1/3 md:bg-transparent md:transform-none md:backdrop-filter-none" :class="{'translate-x-0': cardListVisible, '-translate-x-full': !cardListVisible}">
                 <div class="p-4 h-full flex flex-col relative">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="font-bold text-2xl text-neutral-primary">Kartenliste</h2>
-                        <button @click="cardListVisible = false" class="md:hidden p-1 rounded-md hover:bg-neutral-border">
-                            <span class="material-symbols-outlined">close</span>
-                        </button>
+                    <div class="flex-shrink-0">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="font-bold text-2xl text-neutral-primary">Kartenliste</h2>
+                            <button @click="cardListVisible = false" class="md:hidden p-1 rounded-md hover:bg-neutral-border">
+                                <span class="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+    
+                        <div class="flex gap-2 mb-4">
+                            <button @click="exportCards()" title="Backup erstellen" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-surface border border-neutral-border hover:bg-neutral-primary hover:text-neutral-bg transition-colors text-sm">
+                                <span class="material-symbols-outlined">save</span> Export
+                            </button>
+                            <button @click="$refs.importInput.click()" title="Backup einspielen" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-surface border border-neutral-border hover:bg-neutral-primary hover:text-neutral-bg transition-colors text-sm">
+                                <span class="material-symbols-outlined">folder_open</span> Import
+                            </button>
+                            <input type="file" x-ref="importInput" @change="importCards($event)" class="hidden" accept=".json">
+                        </div>
+     
+                        <div class="flex gap-2 mb-4">
+                            <button @click="showAddCardModal = true" class="flex-grow flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary transition-shadow">
+                                <span class="material-symbols-outlined">add_circle</span> Neue Karte
+                            </button>
+                            <button x-show="selectedCards.length > 0" x-transition @click="deleteSelectedCards()" title="Ausgewählte löschen" class="flex-shrink-0 flex items-center justify-center p-2 rounded-md bg-neutral-secondary text-neutral-bg font-bold hover:shadow-lg transition-shadow">
+                                <span class="material-symbols-outlined">delete</span>
+                            </button>
+                        </div>
                     </div>
 
-
-                    <div class="flex gap-2 mb-4">
-                        <button @click="exportCards()" title="Backup erstellen" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-surface border border-neutral-border hover:bg-neutral-primary hover:text-neutral-bg transition-colors text-sm">
-                            <span class="material-symbols-outlined">save</span> Export
-                        </button>
-                        <button @click="$refs.importInput.click()" title="Backup einspielen" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-surface border border-neutral-border hover:bg-neutral-primary hover:text-neutral-bg transition-colors text-sm">
-                            <span class="material-symbols-outlined">folder_open</span> Import
-                        </button>
-                        <input type="file" x-ref="importInput" @change="importCards($event)" class="hidden" accept=".json">
-                    </div>
- 
-                    <div class="flex gap-2 mb-4">
-                        <button @click="showAddCardModal = true" class="flex-grow flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary transition-shadow">
-                            <span class="material-symbols-outlined">add_circle</span> Neue Karte
-                        </button>
-                        <button x-show="selectedCards.length > 0" x-transition @click="deleteSelectedCards()" title="Ausgewählte löschen" class="flex-shrink-0 flex items-center justify-center p-2 rounded-md bg-neutral-secondary text-neutral-bg font-bold hover:shadow-lg transition-shadow">
-                            <span class="material-symbols-outlined">delete</span>
-                        </button>
-                    </div>
-
-                    <div @click.away="selectedCards = []; lastSelectedCardId = null">
-                        <div x-ref="cardListContainer" class="flex-grow overflow-y-auto pr-2 custom-scrollbar">
+                    <div @click.away="selectedCards = []; lastSelectedCardId = null" class="flex-grow min-h-0">
+                        <div x-ref="cardListContainer" class="h-full overflow-y-auto pr-2 custom-scrollbar">
                             <template x-for="card in sortedCards" :key="card.id">
                                 <div class="flex justify-between items-center group">
                                     <div @click="handleCardClick(card, $event)"
+                                         @touchstart="handleCardTouchStart(card, $event)"
+                                         @touchend="handleCardTouchEnd(card, $event)"
+                                         @touchmove="handleCardTouchMove()"
                                          :class="selectedCards.includes(card.id) ? 'bg-neutral-primary text-neutral-bg' : 'hover:bg-neutral-primary hover:text-neutral-bg'"
                                          class="flex-grow px-3 py-2 cursor-pointer rounded-md text-sm flex justify-between items-center">
                                         <span x-text="card.front"></span>
@@ -277,21 +282,28 @@
                 selectedCards: [],
                 lastSelectedCardId: null,
  
+                // Touch / Selection State
+                longPressTimer: null,
+                isMarkingMode: false,
+
                 // Canvas State
                 drawing: false,
                 canvasContext: null,
                 touchStartX: 0,
- 
+
                 get sortedCards() {
                     return [...this.allCards].sort((a, b) => a.front.localeCompare(b.front));
                 },
- 
+
                 init() {
                     this.loadCards();
                     this.initCanvas();
 
                     this.$watch('currentCard', () => this.adjustFontSize());
                     this.$watch('flipped', () => this.adjustFontSize());
+                    this.$watch('selectedCards.length', (length) => {
+                       this.isMarkingMode = length > 0;
+                    });
                     let resizeTimeout;
                     window.addEventListener('resize', () => {
                         clearTimeout(resizeTimeout);
@@ -454,7 +466,43 @@
                         this.selectCard(card);
                     }
                 },
- 
+
+                handleCardTouchStart(card, event) {
+                   this.longPressTimer = setTimeout(() => {
+                       event.preventDefault();
+                       if (!this.selectedCards.includes(card.id)) {
+                           this.selectedCards.push(card.id);
+                       }
+                       this.lastSelectedCardId = card.id;
+                       this.longPressTimer = null;
+                   }, 500);
+               },
+
+               handleCardTouchEnd(card, event) {
+                   if (this.longPressTimer) {
+                       clearTimeout(this.longPressTimer);
+                       event.preventDefault();
+                       
+                       if (this.isMarkingMode) {
+                           if (this.selectedCards.includes(card.id)) {
+                               this.selectedCards = this.selectedCards.filter(id => id !== card.id);
+                           } else {
+                               this.selectedCards.push(card.id);
+                           }
+                           this.lastSelectedCardId = card.id;
+                       } else {
+                           this.selectCard(card);
+                       }
+                   }
+               },
+
+               handleCardTouchMove() {
+                   if (this.longPressTimer) {
+                       clearTimeout(this.longPressTimer);
+                       this.longPressTimer = null;
+                   }
+               },
+
                 resetSearch() {
                     this.searchTerm = '';
                     this.searchResults = [];
