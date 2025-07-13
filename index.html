@@ -10,8 +10,6 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
- 
      <link rel="preconnect" href="https://fonts.googleapis.com">
      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
@@ -45,9 +43,12 @@
 
     <style>
        :root {
-           --accent-color: #bb86fc;
+           --accent-color: #E0E0E0;
        }
-       body{overflow: hidden;}
+       body{
+           overflow: hidden;
+           background-color: #121212;
+        }
        .card {
             transform-style: preserve-3d;
             transition: transform 0.6s;
@@ -101,7 +102,7 @@
     </style>
 </head>
 
-<body class="font-sans text-neutral-text h-screen bg-cover bg-center bg-fixed" style="background-image: url('https://w.wallhaven.cc/full/gw/wallhaven-gwz8el.jpg');" x-data="flashcardTrainer()">
+<body class="font-sans text-neutral-text h-screen bg-cover bg-center bg-fixed" x-data="flashcardTrainer()">
 
     <div class="container mx-auto p-4 h-full">
 
@@ -118,20 +119,24 @@
                         </div>
     
                         <div class="flex gap-2 mb-4">
-                            <button @click="exportCards()" title="Backup erstellen" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md glass border-none hover:bg-neutral-primary hover:text-neutral-bg transition-colors text-sm">
-                                <span class="material-symbols-outlined">save</span> Export
+                            <button @click="showAddCardModal = true" title="Neue Karte" class="flex-grow p-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary transition-shadow flex items-center justify-center">
+                                <span class="material-symbols-outlined">add_circle</span>
+                                <span class="ml-2">Neue Karte</span>
                             </button>
-                            <button @click="$refs.importInput.click()" title="Backup einspielen" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md glass border-none hover:bg-neutral-primary hover:text-neutral-bg transition-colors text-sm">
-                                <span class="material-symbols-outlined">folder_open</span> Import
+                            <button @click="showHelpModal = true" title="Anleitung" class="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center justify-center">
+                               <span class="material-symbols-outlined">help</span>
+                            </button>
+                            <button @click="exportCards()" title="Backup erstellen" class="p-2 rounded-md glass border-none hover:bg-neutral-primary hover:text-neutral-bg transition-colors flex items-center justify-center">
+                                <span class="material-symbols-outlined">save</span>
+                            </button>
+                            <button @click="$refs.importInput.click()" title="Backup einspielen" class="p-2 rounded-md glass border-none hover:bg-neutral-primary hover:text-neutral-bg transition-colors flex items-center justify-center">
+                                <span class="material-symbols-outlined">folder_open</span>
                             </button>
                             <input type="file" x-ref="importInput" @change="importCards($event)" class="hidden" accept=".json">
-                        </div>
-     
-                        <div class="flex gap-2 mb-4">
-                            <button @click="showAddCardModal = true" class="flex-grow flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary transition-shadow">
-                                <span class="material-symbols-outlined">add_circle</span> Neue Karte
+                            <button @click="showSettingsModal = true" title="Einstellungen" class="p-2 rounded-md bg-neutral-surface hover:bg-neutral-border transition-colors flex items-center justify-center">
+                                <span class="material-symbols-outlined">settings</span>
                             </button>
-                            <button x-show="selectedCards.length > 0" x-transition @click="deleteSelectedCards()" title="Ausgewählte löschen" class="flex-shrink-0 flex items-center justify-center p-2 rounded-md bg-neutral-secondary text-neutral-bg font-bold hover:shadow-lg transition-shadow">
+                            <button x-show="selectedCards.length > 0" x-transition @click="deleteSelectedCards()" title="Ausgewählte löschen" class="p-2 rounded-md bg-red-600 text-white font-bold hover:bg-red-500 transition-colors flex items-center justify-center">
                                 <span class="material-symbols-outlined">delete</span>
                             </button>
                         </div>
@@ -145,16 +150,16 @@
                                          @touchstart="handleCardTouchStart(card, $event)"
                                          @touchend="handleCardTouchEnd(card, $event)"
                                          @touchmove="handleCardTouchMove()"
-                                         :class="selectedCards.includes(card.id) ? 'bg-neutral-primary text-neutral-bg' : 'hover:bg-neutral-primary/80 hover:text-neutral-bg'"
+                                         :class="selectedCards.includes(card.id) ? 'bg-neutral-primary text-neutral-bg' : 'hover:bg-neutral-primary/80'"
                                          class="flex-grow px-3 py-2 cursor-pointer rounded-md text-sm flex justify-between items-center transition-colors duration-200">
                                         <span x-text="card.front"></span>
                                         <span class="text-neutral-dim text-right" :class="{'text-neutral-bg': selectedCards.includes(card.id)}" x-text="card.back"></span>
                                     </div>
                                     <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button @click.stop="editCard(card)" class="p-1 text-neutral-dim hover:text-neutral-primary">
+                                        <button @click.stop="editCard(card)" title="Bearbeiten" class="p-1 text-neutral-dim hover:text-neutral-primary">
                                             <span class="material-symbols-outlined text-base">edit</span>
                                         </button>
-                                        <button @click.stop="deleteCard(card)" class="p-1 text-neutral-dim hover:text-neutral-secondary">
+                                        <button @click.stop="deleteCard(card)" title="Löschen" class="p-1 text-neutral-dim hover:text-red-500">
                                             <span class="material-symbols-outlined text-base">delete</span>
                                         </button>
                                     </div>
@@ -194,19 +199,13 @@
                         <div class="relative w-full h-full card" :class="{ 'is-flipped': flipped }">
                             <div @click="flipped = !flipped"
                                 class="absolute w-full h-full card-face glass flex items-center justify-center cursor-pointer shadow-primary p-4 overflow-hidden">
-                                <button @click.stop="swapSides()" title="Seiten tauschen" class="absolute top-2 right-2 p-2 rounded-full text-neutral-dim hover:text-neutral-primary transition-colors z-10">
-                                    <span class="material-symbols-outlined">sync</span>
-                                </button>
                                 <p class="text-3xl md:text-4xl font-bold text-neutral-text text-center"
-                                    x-text="currentCard.front" x-ref="cardFrontText"></p>
+                                    x-text="sidesSwapped ? currentCard.back : currentCard.front" x-ref="cardFrontText"></p>
                             </div>
                             <div @click="flipped = !flipped"
                                 class="absolute w-full h-full card-face card-back glass flex flex-col items-center justify-center cursor-pointer shadow-primary p-4 overflow-hidden">
-                                <button @click.stop="swapSides()" title="Seiten tauschen" class="absolute top-2 right-2 p-2 rounded-full text-neutral-dim hover:text-neutral-primary transition-colors z-10">
-                                    <span class="material-symbols-outlined">sync</span>
-                                </button>
                                 <p class="text-3xl md:text-4xl font-bold text-neutral-primary text-center"
-                                    x-text="currentCard.back" x-ref="cardBackText"></p>
+                                    x-text="sidesSwapped ? currentCard.front : currentCard.back" x-ref="cardBackText"></p>
                             </div>
                         </div>
                     </div>
@@ -222,7 +221,7 @@
                         </button>
 
                         <div x-show="searchResults.length > 0" x-transition
-                            class="absolute z-10 w-full bottom-full mb-1 glass border-none rounded-md max-h-60 overflow-y-auto shadow-lg">
+                            class="absolute z-10 w-full bottom-full mb-1 glass border-none rounded-md max-h-60 overflow-y-auto shadow-lg custom-scrollbar">
                             <template x-for="card in searchResults" :key="card.id">
                                 <div @click="selectCard(card)"
                                     class="px-4 py-2 cursor-pointer hover:bg-neutral-primary/80 hover:text-neutral-bg flex justify-between items-center">
@@ -258,9 +257,115 @@
                </div>
            </div>
 
-        </div>
+           <!-- Settings Modal -->
+           <div x-show="showSettingsModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" style="display: none;">
+               <div @click.away="showSettingsModal = false" class="glass shadow-primary p-6 w-full max-w-md">
+                   <h3 class="font-bold text-2xl text-neutral-primary mb-6">Einstellungen</h3>
+                   
+                   <div class="space-y-6">
+                       <div class="flex items-center justify-between">
+                           <span class="text-neutral-text">Vorder- & Rückseite tauschen</span>
+                           <button @click="swapSides()" :class="sidesSwapped ? 'bg-neutral-primary' : 'bg-neutral-surface'" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors">
+                               <span :class="sidesSwapped ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                           </button>
+                       </div>
+
+                       <div>
+                           <label class="block text-neutral-dim mb-2">Kartenreihenfolge</label>
+                           <div class="flex gap-2">
+                               <button @click="setCardOrder('random')" :class="{ 'bg-neutral-primary text-neutral-bg': cardOrder === 'random', 'bg-neutral-surface': cardOrder !== 'random' }" class="flex-1 py-2 px-4 rounded-md transition-colors">
+                                   Zufällig
+                               </button>
+                               <button @click="setCardOrder('sequential')" :class="{ 'bg-neutral-primary text-neutral-bg': cardOrder === 'sequential', 'bg-neutral-surface': cardOrder !== 'sequential' }" class="flex-1 py-2 px-4 rounded-md transition-colors">
+                                   In Reihe
+                               </button>
+                           </div>
+                       </div>
+
+                       <div>
+                           <label class="block text-neutral-dim mb-2">Hintergrundbild</label>
+                           <div class="flex gap-2">
+                               <input type="text" x-model="newBgUrl" placeholder="Bild-URL einfügen..." class="flex-grow px-3 py-2 glass border-none rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-primary text-neutral-text placeholder-neutral-dim text-sm">
+                               <button @click="applyBgUrl()" class="px-3 py-2 rounded-md bg-neutral-surface hover:bg-neutral-border transition-colors">OK</button>
+                           </div>
+                           <div class="mt-2 text-center">
+                               <span class="text-neutral-dim text-sm">oder</span>
+                           </div>
+                           <div class="flex gap-2 mt-2">
+                               <button @click="$refs.bgUpload.click()" class="flex-1 px-3 py-2 rounded-md bg-neutral-surface hover:bg-neutral-border transition-colors text-sm">
+                                   Hochladen
+                               </button>
+                               <button @click="removeBackground()" class="flex-1 px-3 py-2 rounded-md bg-neutral-surface hover:bg-neutral-border transition-colors text-sm">
+                                   Entfernen
+                               </button>
+                           </div>
+                           <input type="file" x-ref="bgUpload" @change="handleBgUpload($event)" class="hidden" accept="image/*">
+                       </div>
+
+                       <div>
+                           <label class="block text-neutral-dim mb-2">Gefahrenzone</label>
+                           <button @click="deleteAllCards()" class="w-full px-3 py-2 rounded-md bg-red-600 text-white font-bold hover:bg-red-500 transition-colors text-sm">
+                               Alle Karten löschen
+                           </button>
+                       </div>
+                   </div>
+
+                   <div class="flex justify-end mt-8">
+                       <button @click="showSettingsModal = false" class="px-4 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary">Fertig</button>
+                   </div>
+               </div>
+           </div>
+
+          <!-- Help Modal -->
+          <div x-show="showHelpModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" style="display: none;">
+              <div @click.away="showHelpModal = false" class="glass shadow-primary p-6 w-full max-w-lg">
+                  <h3 class="font-bold text-2xl text-neutral-primary mb-4">Anleitung</h3>
+                  <div class="space-y-4 text-neutral-text custom-scrollbar pr-2" style="max-height: 70vh; overflow-y: auto;">
+                      <p class="font-bold">Wie funktioniert die App?</p>
+                      <p>Discere ist eine einfache Lernkarten-App. Du kannst Karten mit einer Vorder- und Rückseite erstellen und dich dann selbst abfragen.</p>
+                      <ul class="list-disc list-inside space-y-2 pl-4">
+                          <li><strong class="text-neutral-primary">Karte hinzufügen:</strong> Klicke auf das <span class="material-symbols-outlined !text-sm inline-block align-middle">add_circle</span> Symbol, um eine neue Karte zu erstellen.</li>
+                          <li><strong class="text-neutral-primary">Karte umdrehen:</strong> Klicke auf die große Karte, um die Antwort zu sehen. Auf Mobilgeräten kannst du auch wischen.</li>
+                          <li><strong class="text-neutral-primary">Nächste/Vorherige:</strong> Nutze die Pfeile links und rechts neben der Karte oder die Pfeiltasten auf deiner Tastatur.</li>
+                          <li><strong class="text-neutral-primary">Zeichnen:</strong> Unter der Karte befindet sich ein Feld, auf dem du zur Übung schreiben oder zeichnen kannst.</li>
+                          <li><strong class="text-neutral-primary">Kartenliste:</strong> Alle deine Karten sind links aufgelistet. Du kannst sie bearbeiten, löschen oder mehrere auswählen (mit Strg/Shift oder langem Drücken auf Mobilgeräten).</li>
+                      </ul>
+
+                      <p class="font-bold mt-6">JSON-Importformat</p>
+                      <p>Du kannst Karten aus einer <code>.json</code>-Datei importieren. Die Datei muss ein Array von Objekten enthalten, wobei jedes Objekt eine "front" und eine "back" Eigenschaft haben muss.</p>
+                      <p>Beispiel:</p>
+                      <pre class="bg-neutral-surface p-3 rounded-md text-sm overflow-x-auto custom-scrollbar"><code>[
+{
+  "front": "Was ist die Hauptstadt von Deutschland?",
+  "back": "Berlin"
+},
+{
+  "front": "Wie hoch ist der Eiffelturm?",
+  "back": "324 Meter"
+}
+]</code></pre>
+                  </div>
+                  <div class="flex justify-end mt-6">
+                      <button @click="showHelpModal = false" class="px-4 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary">Verstanden</button>
+                  </div>
+              </div>
+          </div>
+       </div>
+
+           <!-- Import Confirm Modal -->
+           <div x-show="showImportConfirmModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" style="display: none;">
+               <div @click.away="cancelImport()" class="glass shadow-primary p-6 w-full max-w-md">
+                   <h3 class="font-bold text-2xl text-neutral-primary mb-4">Karten importieren</h3>
+                   <p class="text-neutral-text mb-6">Es sind bereits Karten vorhanden. Wie möchten Sie mit den importierten Karten fortfahren?</p>
+                   <div class="flex justify-end gap-4 mt-6">
+                       <button @click="mergeImport()" class="px-4 py-2 rounded-md bg-neutral-surface hover:bg-neutral-border">Ergänzen</button>
+                       <button @click="replaceImport()" class="px-4 py-2 rounded-md bg-neutral-primary text-neutral-bg font-bold hover:shadow-primary">Ersetzen</button>
+                       <button @click="cancelImport()" class="px-4 py-2 rounded-md text-neutral-dim hover:text-neutral-primary">Abbrechen</button>
+                   </div>
+               </div>
+           </div>
     
-        <!-- Bottom Bar -->
+      <!-- Bottom Bar -->
         <div class="md:hidden fixed bottom-0 left-0 right-0 h-16 flex items-center justify-between px-4 z-30 bottom-bar-glass">
             <h1 class="font-bold text-2xl text-neutral-primary">Discere</h1>
             <button @click="cardListVisible = !cardListVisible" class="p-2">
@@ -289,6 +394,13 @@
                 editingCard: null,
                 selectedCards: [],
                 lastSelectedCardId: null,
+                showSettingsModal: false,
+                showImportConfirmModal: false,
+                showHelpModal: false,
+                cardsToImport: [],
+                sidesSwapped: false,
+                cardOrder: 'random', // 'random' or 'sequential'
+                newBgUrl: '',
  
                 // Touch / Selection State
                 longPressTimer: null,
@@ -304,10 +416,23 @@
                 },
 
                 init() {
+                   const savedBg = localStorage.getItem('discere_background_image');
+                   if (savedBg) {
+                       document.body.style.backgroundImage = `url('${savedBg}')`;
+                   } else {
+                       document.body.style.backgroundImage = '';
+                   }
                     this.loadCards();
                     this.initCanvas();
-                    this.updateAccentColor();
-
+ 
+                     this.$watch('sidesSwapped', (value) => {
+                        localStorage.setItem('discere_sides_swapped', value);
+                       this.adjustFontSize();
+                    });
+                    this.$watch('cardOrder', (value) => {
+                       localStorage.setItem('discere_card_order', value);
+                       this.loadCards(); // Reload cards to apply new order
+                    });
                     this.$watch('currentCard', () => this.adjustFontSize());
                     this.$watch('flipped', () => this.adjustFontSize());
                     this.$watch('selectedCards.length', (length) => {
@@ -325,16 +450,31 @@
                                 canvas.width = canvas.offsetWidth;
                                 canvas.height = canvas.offsetHeight;
                                 // Re-apply styles as they can be reset
-                                this.canvasContext.strokeStyle = '#bb86fc';
+                                this.canvasContext.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-color');
                                 this.canvasContext.lineWidth = 3;
                                 this.canvasContext.lineCap = 'round';
                                 this.canvasContext.lineJoin = 'round';
                             });
                         }, 150);
                     });
+                   window.addEventListener('keydown', (e) => {
+                       if (this.showAddCardModal) return; // Do not interfere with typing in the modal
+                       if (e.key === 'ArrowRight') {
+                           this.nextCard();
+                       } else if (e.key === 'ArrowLeft') {
+                           this.previousCard();
+                       } else if (e.key === ' ') {
+                           e.preventDefault(); // Prevent scrolling
+                           this.flipped = !this.flipped;
+                       }
+                   });
                 },
 
                 loadCards() {
+                   // Load settings from localStorage
+                   this.sidesSwapped = localStorage.getItem('discere_sides_swapped') === 'true';
+                   this.cardOrder = localStorage.getItem('discere_card_order') || 'random';
+
                     const savedCards = localStorage.getItem('discere_cards');
                     if (savedCards) {
                         try {
@@ -350,8 +490,13 @@
                          this.allCards = [];
                     }
                     
-                    this.cards = [...this.allCards];
-                    this.shuffleCards();
+                    if (this.cardOrder === 'sequential') {
+                        this.cards = this.sortedCards;
+                    } else {
+                        this.cards = [...this.allCards];
+                        this.shuffleCards();
+                    }
+
                     this.currentIndex = 0;
                     if (this.cards.length > 0) {
                         this.currentCard = this.cards[0];
@@ -381,7 +526,7 @@
                         this.currentIndex++;
                         if (this.currentIndex >= this.cards.length) {
                             this.currentIndex = 0;
-                            if (this.searchTerm.trim() === '') {
+                            if (this.searchTerm.trim() === '' && this.cardOrder === 'random') {
                                 this.shuffleCards();
                             }
                         }
@@ -545,35 +690,110 @@
                 importCards(event) {
                     const file = event.target.files[0];
                     if (!file) return;
+
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         try {
                             let content = e.target.result;
-                            if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
-                            const importedCards = JSON.parse(content);
-                            if (Array.isArray(importedCards) && (importedCards.length === 0 || (importedCards[0].front && importedCards[0].back))) {
-                                const newCards = importedCards.map(c => ({...c, id: Date.now() + Math.random()}));
-                                this.allCards = newCards;
-                                this.saveCards();
-                                this.loadCards();
-                                alert(`${importedCards.length} Karten erfolgreich importiert!`);
-                            } else {
-                                alert('Ungültiges Dateiformat.');
+                            if (content.charCodeAt(0) === 0xFEFF) {
+                                content = content.slice(1);
                             }
+                            
+                            const importedCards = JSON.parse(content);
+
+                            if (!Array.isArray(importedCards) || !importedCards.every(c => c && typeof c.front === 'string' && typeof c.back === 'string')) {
+                                alert('Ungültiges Dateiformat. Die Datei muss ein Array von Karten mit "front" und "back" Eigenschaften sein.');
+                                return;
+                            }
+
+                            if (importedCards.length === 0) {
+                                alert('Die importierte Datei enthält keine Karten.');
+                                return;
+                            }
+
+                            this.cardsToImport = importedCards;
+
+                            if (this.allCards.length > 0) {
+                                this.showImportConfirmModal = true;
+                            } else {
+                                this.replaceImport();
+                            }
+
                         } catch (error) {
                             console.error("Import-Fehler:", error);
-                            alert('Fehler beim Verarbeiten der Datei.');
+                            alert('Fehler beim Verarbeiten der Datei. Stellen Sie sicher, dass es eine gültige JSON-Datei ist.');
                         }
                     };
                     reader.readAsText(file);
                     event.target.value = '';
                 },
- 
-                swapSides() {
-                    this.allCards = this.allCards.map(card => ({ ...card, front: card.back, back: card.front }));
+
+                mergeImport() {
+                    const existingFronts = new Set(this.allCards.map(c => c.front.toLowerCase()));
+                    let addedCount = 0;
+                    this.cardsToImport.forEach(newCard => {
+                        if (!existingFronts.has(newCard.front.toLowerCase())) {
+                            this.allCards.push({ ...newCard, id: Date.now() + Math.random() });
+                            addedCount++;
+                        }
+                    });
+                    // A less intrusive notification could be implemented later
+                    alert(`${addedCount} von ${this.cardsToImport.length} Karten wurden neu hinzugefügt. Duplikate wurden übersprungen.`);
+                    this.finishImport();
+                },
+
+                replaceImport() {
+                    this.allCards = this.cardsToImport.map(c => ({ ...c, id: Date.now() + Math.random() }));
+                    alert(`${this.cardsToImport.length} Karten erfolgreich importiert und bestehende ersetzt.`);
+                    this.finishImport();
+                },
+
+                cancelImport() {
+                    this.showImportConfirmModal = false;
+                    this.cardsToImport = [];
+                },
+
+                finishImport() {
                     this.saveCards();
                     this.loadCards();
+                    this.cancelImport(); // Resets state
                 },
+ 
+                swapSides() {
+                   this.sidesSwapped = !this.sidesSwapped;
+                },
+
+                setCardOrder(order) {
+                   this.cardOrder = order;
+                },
+
+               setBackground(url) {
+                   document.body.style.backgroundImage = `url('${url}')`;
+                   localStorage.setItem('discere_background_image', url);
+               },
+
+               applyBgUrl() {
+                   if (this.newBgUrl.trim()) {
+                       this.setBackground(this.newBgUrl.trim());
+                   }
+               },
+
+               handleBgUpload(event) {
+                   const file = event.target.files[0];
+                   if (!file) return;
+                   const reader = new FileReader();
+                   reader.onload = (e) => {
+                       this.setBackground(e.target.result);
+                   };
+                   reader.readAsDataURL(file);
+                   event.target.value = '';
+               },
+
+               removeBackground() {
+                   document.body.style.backgroundImage = '';
+                   localStorage.removeItem('discere_background_image');
+                   // The accent color is now static CSS, so no JS update is needed.
+               },
 
                 deleteCard(cardToDelete) {
                     if (confirm(`Möchten Sie die Karte "${cardToDelete.front}" wirklich löschen?`)) {
@@ -594,6 +814,18 @@
                         this.saveCards();
                         this.loadCards();
                         alert('Ausgewählte Karten gelöscht.');
+                    }
+                },
+
+                deleteAllCards() {
+                    if (confirm('Möchten Sie wirklich ALLE Karten unwiderruflich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+                        this.allCards = [];
+                        this.selectedCards = [];
+                        this.lastSelectedCardId = null;
+                        this.saveCards();
+                        this.loadCards();
+                        this.showSettingsModal = false;
+                        alert('Alle Karten wurden gelöscht.');
                     }
                 },
  
@@ -722,85 +954,6 @@
                    }
                },
 
-              updateAccentColor() {
-                  const colorThief = new ColorThief();
-                  const img = new Image();
-                  const bodyStyles = window.getComputedStyle(document.body);
-                  const imageUrl = bodyStyles.backgroundImage.slice(4, -1).replace(/"/g, "");
-
-                  if (!imageUrl) return;
-
-                  img.crossOrigin = 'Anonymous';
-                  img.src = imageUrl;
-
-                  img.onload = () => {
-                      const dominantColor = colorThief.getColor(img);
-                      const accentColor = this.generateAccentColor(dominantColor);
-                      
-                      document.documentElement.style.setProperty('--accent-color', accentColor);
-                      
-                      if (this.canvasContext) {
-                          this.canvasContext.strokeStyle = accentColor;
-                      }
-                  };
-                  img.onerror = (e) => {
-                      console.error("Fehler beim Laden des Hintergrundbildes für die Farbanalyse.", e);
-                  }
-              },
-
-              generateAccentColor(rgb) {
-                  let [r, g, b] = rgb;
-                  // Convert RGB to HSL
-                  r /= 255; g /= 255; b /= 255;
-                  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-                  let h, s, l = (max + min) / 2;
-
-                  if (max === min) {
-                      h = s = 0; // achromatic
-                  } else {
-                      const d = max - min;
-                      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                      switch (max) {
-                          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                          case g: h = (b - r) / d + 2; break;
-                          case b: h = (r - g) / d + 4; break;
-                      }
-                      h /= 6;
-                  }
-
-                  // Adjust HSL to create a vibrant accent color
-                  s = Math.max(0.6, s * 1.2); // Increase saturation, but not less than 0.6
-                  l = Math.max(0.65, l * 1.1); // Increase lightness, but not less than 0.65
-                  s = Math.min(1, s);
-                  l = Math.min(0.8, l);
-
-                  // Convert HSL back to RGB
-                  let r_out, g_out, b_out;
-                  if (s === 0) {
-                      r_out = g_out = b_out = l;
-                  } else {
-                      const hue2rgb = (p, q, t) => {
-                          if (t < 0) t += 1;
-                          if (t > 1) t -= 1;
-                          if (t < 1/6) return p + (q - p) * 6 * t;
-                          if (t < 1/2) return q;
-                          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                          return p;
-                      }
-                      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                      const p = 2 * l - q;
-                      r_out = hue2rgb(p, q, h + 1/3);
-                      g_out = hue2rgb(p, q, h);
-                      b_out = hue2rgb(p, q, h - 1/3);
-                  }
-                  
-                  const toHex = x => {
-                      const hex = Math.round(x * 255).toString(16);
-                      return hex.length === 1 ? '0' + hex : hex;
-                  };
-                  
-                  return `#${toHex(r_out)}${toHex(g_out)}${toHex(b_out)}`;
-              }
            }
        }
    </script>
